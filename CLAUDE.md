@@ -164,41 +164,80 @@ The admin creates a Google Sheet with three sheets (tabs):
 
 ## Development Commands
 
-> To be updated as the project is scaffolded.
-
 ```bash
 # Frontend (Next.js)
 cd frontend
 npm install
-npm run dev          # Start dev server
+npm run dev          # Start dev server on localhost:3000
 npm run build        # Production build
 npm run lint         # Lint code
 
 # Backend (Node.js)
 cd backend
 npm install
-npm start            # Start server
+npm start            # Start server on localhost:3001
 npm run dev          # Start with hot reload (nodemon)
 ```
 
-## Project Structure
+For local development, create a `.env` file in `backend/` (see `backend/.env.example`) and a `.env.local` file in `frontend/` with `NEXT_PUBLIC_BACKEND_URL=http://localhost:3001`.
 
-> To be updated as the project is scaffolded.
+## Project Structure
 
 ```
 KGolfDraft/
-├── frontend/          # Next.js application
+├── frontend/                     # Next.js application (TypeScript)
 │   ├── src/
-│   │   ├── app/       # Next.js app router pages
-│   │   ├── components/# React components
-│   │   └── lib/       # Utilities, Socket.IO client, types
+│   │   ├── app/
+│   │   │   ├── layout.tsx        # Root layout
+│   │   │   ├── page.tsx          # Login page
+│   │   │   ├── globals.css       # Tailwind CSS imports
+│   │   │   └── draft/
+│   │   │       └── page.tsx      # Main draft page
+│   │   ├── components/
+│   │   │   ├── AdminPanel.tsx    # Admin controls (start draft, manage users)
+│   │   │   ├── Chat.tsx          # Real-time chat
+│   │   │   ├── DraftBoard.tsx    # Grid showing all picks by round
+│   │   │   ├── MyTeam.tsx        # Current user's drafted team
+│   │   │   └── PlayerList.tsx    # Available golfers to pick
+│   │   └── lib/
+│   │       ├── socket.ts         # Socket.IO client singleton
+│   │       └── types.ts          # Shared TypeScript types
+│   ├── .env.example
+│   ├── next.config.js
+│   ├── tailwind.config.js
+│   ├── postcss.config.js
+│   ├── tsconfig.json
 │   └── package.json
-├── backend/           # Node.js + Socket.IO server
-│   ├── server.js      # Entry point
-│   ├── sheets.js      # Google Sheets API integration
-│   ├── draft.js       # Draft state management
-│   ├── chat.js        # Chat logic
+├── backend/                      # Node.js + Socket.IO server
+│   ├── server.js                 # Entry point — Express, Socket.IO, event handlers
+│   ├── sheets.js                 # Google Sheets API read/write
+│   ├── draft.js                  # Draft state machine (snake order, auto-draft)
+│   ├── .env.example
 │   └── package.json
-├── CLAUDE.md          # This file — project documentation
-└── README.md          # User-facing setup instructions
+├── .gitignore
+└── CLAUDE.md                     # This file — project documentation
 ```
+
+## Socket.IO Events
+
+### Client → Server
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `login` | `{ email, token }` | Authenticate with email or session token |
+| `start-draft` | `{ totalRounds }` | Admin starts the draft |
+| `make-pick` | `{ golferName }` | Current picker selects a golfer |
+| `admin-pick` | `{ userEmail, golferName }` | Admin picks on behalf of a user |
+| `toggle-auto-draft` | `{ enabled }` | Toggle self auto-draft |
+| `admin-toggle-auto-draft` | `{ userEmail, enabled }` | Admin toggles auto-draft for any user |
+| `chat-message` | `{ text }` | Send a chat message |
+
+### Server → Client
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `draft-started` | `DraftState` | Draft has begun |
+| `pick-made` | `{ pick, draftState }` | A pick was made |
+| `draft-complete` | `DraftState` | All rounds finished |
+| `chat-message` | `ChatMessage` | New chat message |
+| `auto-draft-updated` | `{ email, enabled }` | Auto-draft status changed |
+| `user-online` | `{ email, name, onlineUsers }` | User connected |
+| `user-offline` | `{ email, name, onlineUsers }` | User disconnected |
