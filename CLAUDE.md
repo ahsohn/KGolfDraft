@@ -7,33 +7,40 @@ A real-time golf snake draft web application with integrated chat for a group of
 ## Tech Stack
 
 - **Frontend**: Next.js (React), deployed to Vercel at `golfdraft.ahsdesigns.com`
-- **Backend**: Node.js with Socket.IO for real-time WebSocket communication, runs locally on the admin's machine and is exposed to the internet via ngrok
+- **Backend**: Node.js with Socket.IO for real-time WebSocket communication, runs locally on the admin's machine and is exposed via Cloudflare Tunnel at `draft-api.ahsdesigns.com`
 - **Data Layer**: Google Sheets API with a Google Service Account for authentication
 - **Styling**: Responsive design — mobile and desktop friendly
 
 ## Architecture
 
 ```
-┌──────────────────┐         WebSocket (Socket.IO)         ┌──────────────────┐
-│   Next.js App    │ ◄──────────────────────────────────► │  Node.js Server  │
-│   (Vercel)       │                                       │  (Admin's PC)    │
-│                  │                                       │                  │
-│  golfdraft.      │                                       │  Exposed via     │
-│  ahsdesigns.com  │                                       │  ngrok           │
-└──────────────────┘                                       └────────┬─────────┘
-                                                                    │
-                                                           Google Sheets API
-                                                                    │
-                                                           ┌────────▼─────────┐
-                                                           │  Google Sheet    │
-                                                           │  (Players,       │
-                                                           │   Users, Picks)  │
-                                                           └──────────────────┘
+┌──────────────────┐       WebSocket (Socket.IO)       ┌───────────────────┐
+│   Next.js App    │ ◄──────────────────────────────► │ Cloudflare Tunnel │
+│   (Vercel)       │                                   │                   │
+│  golfdraft.      │                                   │  draft-api.       │
+│  ahsdesigns.com  │                                   │  ahsdesigns.com   │
+└──────────────────┘                                   └─────────┬─────────┘
+                                                                 │
+                                                        cloudflared daemon
+                                                                 │
+                                                       ┌─────────▼─────────┐
+                                                       │  Node.js Server   │
+                                                       │  (Admin's PC)     │
+                                                       │  localhost:3001   │
+                                                       └─────────┬─────────┘
+                                                                 │
+                                                        Google Sheets API
+                                                                 │
+                                                       ┌─────────▼─────────┐
+                                                       │  Google Sheet     │
+                                                       │  (Players,        │
+                                                       │   Users, Picks)   │
+                                                       └───────────────────┘
 ```
 
-- The **frontend** on Vercel connects to the backend via Socket.IO WebSocket.
+- The **frontend** on Vercel connects to the backend via Socket.IO WebSocket through Cloudflare Tunnel.
 - The **backend** manages all draft state, chat, auto-draft logic, and reads/writes Google Sheets.
-- The **backend URL** (ngrok) changes each session and must be configured at runtime (environment variable or admin setting in the frontend).
+- The **backend URL** is stable: `https://draft-api.ahsdesigns.com` — the same URL works every draft session. The `cloudflared` daemon on the admin's machine routes traffic from Cloudflare to the local Node.js server.
 
 ## Google Sheets Structure
 
@@ -118,19 +125,42 @@ The admin creates a Google Sheet with three sheets (tabs):
 4. Populate the `Users` tab with participant emails, names, draft order, and admin flags
 5. Leave the `Picks` tab empty (headers only) — it will be filled during the draft
 
+### Cloudflare DNS Setup (if not already done)
+1. Sign up for a free Cloudflare account at https://dash.cloudflare.com
+2. Add `ahsdesigns.com` to Cloudflare
+3. Cloudflare will provide two nameservers — update the nameservers at your domain registrar to point to Cloudflare
+4. Wait for DNS propagation (can take up to 24 hours, usually much faster)
+5. Verify the domain is active in the Cloudflare dashboard
+6. Re-create any existing DNS records (e.g., Squarespace site records) in Cloudflare
+
+### Cloudflare Tunnel Setup (one-time)
+1. Install `cloudflared` on the admin's machine: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
+2. Authenticate: `cloudflared tunnel login` (opens browser to authorize)
+3. Create the tunnel: `cloudflared tunnel create kgolfdraft`
+4. Route DNS to the tunnel: `cloudflared tunnel route dns kgolfdraft draft-api.ahsdesigns.com`
+5. Create a config file at `~/.cloudflared/config.yml`:
+   ```yaml
+   tunnel: kgolfdraft
+   credentials-file: ~/.cloudflared/<TUNNEL_ID>.json
+   ingress:
+     - hostname: draft-api.ahsdesigns.com
+       service: http://localhost:3001
+     - service: http_status:404
+   ```
+
 ### Vercel Deployment (Frontend)
 1. Connect the repository to Vercel
 2. Set the custom domain to `golfdraft.ahsdesigns.com`
-3. In Squarespace DNS for `ahsdesigns.com`, add a CNAME record: `golfdraft` → `cname.vercel-dns.com`
-4. Set environment variables in Vercel as needed (e.g., default backend URL if applicable)
+3. In Cloudflare DNS, add a CNAME record: `golfdraft` → `cname.vercel-dns.com` (set to DNS-only / gray cloud, not proxied)
+4. Set environment variable in Vercel: `NEXT_PUBLIC_BACKEND_URL=https://draft-api.ahsdesigns.com`
 
 ### Backend (Admin's Computer)
 1. Install Node.js (v18+)
 2. Place the Google Service Account JSON key file in the backend directory
-3. Set environment variables: `GOOGLE_SHEET_ID`, `GOOGLE_SERVICE_ACCOUNT_KEY_PATH`, `PORT`
-4. Run the server: `node server.js` (or `npm start`)
-5. Expose via ngrok: `ngrok http <PORT>`
-6. Share the ngrok URL with the frontend (via environment variable, admin UI, or config endpoint)
+3. Set environment variables: `GOOGLE_SHEET_ID`, `GOOGLE_SERVICE_ACCOUNT_KEY_PATH`, `PORT=3001`
+4. Run the server: `npm start`
+5. Start the Cloudflare Tunnel: `cloudflared tunnel run kgolfdraft`
+6. The backend is now accessible at `https://draft-api.ahsdesigns.com`
 
 ## Development Commands
 
