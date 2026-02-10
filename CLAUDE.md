@@ -69,6 +69,14 @@ The admin creates a Google Sheet with three sheets (tabs):
 | User Name   | Display name of the user |
 | Golfer Name | Name of the golfer selected |
 
+### Chat Log Sheet (auto-created when draft completes)
+| Column    | Description |
+|-----------|-------------|
+| Timestamp | Date/time of the message |
+| Sender    | User name or "System" |
+| Message   | Message text |
+| Type      | "system" (pick announcements, joins) or "user" (chat) |
+
 ## Authentication
 
 - **Email-only login** — no passwords required

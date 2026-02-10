@@ -90,4 +90,59 @@ async function clearPicks() {
   }
 }
 
-module.exports = { init, getPlayers, getUsers, getExistingPicks, writePick, clearPicks };
+async function writeChatLog(messages) {
+  const sheetName = "Chat Log";
+
+  // Ensure the "Chat Log" tab exists
+  try {
+    const spreadsheet = await sheetsClient.spreadsheets.get({
+      spreadsheetId: sheetId,
+    });
+    const exists = spreadsheet.data.sheets.some(
+      (s) => s.properties.title === sheetName
+    );
+
+    if (exists) {
+      // Clear existing content
+      await sheetsClient.spreadsheets.values.clear({
+        spreadsheetId: sheetId,
+        range: `${sheetName}!A:D`,
+      });
+    } else {
+      // Create the tab
+      await sheetsClient.spreadsheets.batchUpdate({
+        spreadsheetId: sheetId,
+        requestBody: {
+          requests: [
+            { addSheet: { properties: { title: sheetName } } },
+          ],
+        },
+      });
+    }
+  } catch (err) {
+    console.error("Error preparing Chat Log sheet:", err.message);
+    return;
+  }
+
+  // Build rows: header + messages
+  const header = ["Timestamp", "Sender", "Message", "Type"];
+  const rows = messages.map((msg) => [
+    new Date(msg.timestamp).toLocaleString(),
+    msg.sender,
+    msg.text,
+    msg.isSystem ? "system" : "user",
+  ]);
+
+  await sheetsClient.spreadsheets.values.update({
+    spreadsheetId: sheetId,
+    range: `${sheetName}!A1`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: {
+      values: [header, ...rows],
+    },
+  });
+
+  console.log(`Chat log saved: ${messages.length} messages`);
+}
+
+module.exports = { init, getPlayers, getUsers, getExistingPicks, writePick, clearPicks, writeChatLog };

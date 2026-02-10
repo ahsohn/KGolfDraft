@@ -274,26 +274,24 @@ io.on("connection", (socket) => {
   });
 });
 
-function emitPickMade(pick, complete, isAdminOverride = false) {
-  const state = draft.getState();
-  const suffix = isAdminOverride ? " (admin pick)" : "";
-  const pickMsg = addChatMessage(
+function handleDraftComplete(state) {
+  const completeMsg = addChatMessage(
     "System",
-    `${pick.userName} picked ${pick.golferName} (Round ${pick.round}, Pick #${pick.pickNumber})${suffix}`,
+    "The draft is complete! Check out the final teams.",
     true
   );
+  io.to("draft").emit("draft-complete", state);
+  io.to("draft").emit("chat-message", completeMsg);
 
-  io.to("draft").emit("pick-made", { pick, draftState: state });
-  io.to("draft").emit("chat-message", pickMsg);
+  // Save chat log to Google Sheet
+  sheets.writeChatLog(chatHistory).catch((err) => {
+    console.error("Error saving chat log:", err.message);
+  });
+}
 
+function emitAfterPick(state, complete) {
   if (complete) {
-    const completeMsg = addChatMessage(
-      "System",
-      "The draft is complete! Check out the final teams.",
-      true
-    );
-    io.to("draft").emit("draft-complete", state);
-    io.to("draft").emit("chat-message", completeMsg);
+    handleDraftComplete(state);
   } else {
     const picker = draft.getCurrentPicker();
     if (picker) {
@@ -307,6 +305,20 @@ function emitPickMade(pick, complete, isAdminOverride = false) {
   }
 }
 
+function emitPickMade(pick, complete, isAdminOverride = false) {
+  const state = draft.getState();
+  const suffix = isAdminOverride ? " (admin pick)" : "";
+  const pickMsg = addChatMessage(
+    "System",
+    `${pick.userName} picked ${pick.golferName} (Round ${pick.round}, Pick #${pick.pickNumber})${suffix}`,
+    true
+  );
+
+  io.to("draft").emit("pick-made", { pick, draftState: state });
+  io.to("draft").emit("chat-message", pickMsg);
+  emitAfterPick(state, complete);
+}
+
 // Auto-draft callback — when draft.js auto-picks, emit via socket
 draft.setOnPickCallback((pick, isAutoDraft) => {
   const state = draft.getState();
@@ -318,26 +330,7 @@ draft.setOnPickCallback((pick, isAutoDraft) => {
 
   io.to("draft").emit("pick-made", { pick, draftState: state });
   io.to("draft").emit("chat-message", pickMsg);
-
-  if (state.status === "complete") {
-    const completeMsg = addChatMessage(
-      "System",
-      "The draft is complete! Check out the final teams.",
-      true
-    );
-    io.to("draft").emit("draft-complete", state);
-    io.to("draft").emit("chat-message", completeMsg);
-  } else {
-    const picker = draft.getCurrentPicker();
-    if (picker) {
-      const turnMsg = addChatMessage(
-        "System",
-        `Round ${state.currentRound} — ${picker.name} is on the clock!`,
-        true
-      );
-      io.to("draft").emit("chat-message", turnMsg);
-    }
-  }
+  emitAfterPick(state, state.status === "complete");
 });
 
 // Start server
