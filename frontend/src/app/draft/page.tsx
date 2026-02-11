@@ -27,13 +27,8 @@ export default function DraftPage() {
       return;
     }
 
-    if (!socket.connected) {
-      socket.connect();
-    }
-
-    socket.on("connect", () => {
+    function authenticateWithToken() {
       setConnected(true);
-      // Re-login with token
       socket.emit(
         "login",
         { email: "", token },
@@ -54,6 +49,21 @@ export default function DraftPage() {
           }
         }
       );
+    }
+
+    if (socket.connected) {
+      // Socket already connected (e.g. navigated from login page)
+      authenticateWithToken();
+    } else {
+      socket.connect();
+    }
+
+    socket.on("connect", () => {
+      authenticateWithToken();
+    });
+
+    socket.on("connect_error", () => {
+      setConnected(false);
     });
 
     socket.on("disconnect", () => setConnected(false));
@@ -124,6 +134,7 @@ export default function DraftPage() {
 
     return () => {
       socket.off("connect");
+      socket.off("connect_error");
       socket.off("disconnect");
       socket.off("draft-started");
       socket.off("pick-made");
