@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSocket } from "@/lib/socket";
+import { APP_VERSION } from "@/lib/version";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -54,6 +55,7 @@ export default function LoginPage() {
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">KGolfDraft</h1>
           <p className="text-green-300 text-lg">Golf Snake Draft</p>
+          <p className="text-green-600 text-xs mt-1">v{APP_VERSION}</p>
         </div>
 
         <form

@@ -1,5 +1,9 @@
 # KGolfDraft — Golf Snake Draft Web Application
 
+## Version Management
+
+The app version is defined in `frontend/src/lib/version.ts` and displayed on the login screen. **Every time you make changes based on a user request, increment the patch version** (e.g., 1.1.0 → 1.1.1). For larger feature additions, increment the minor version (e.g., 1.1.1 → 1.2.0).
+
 ## Project Overview
 
 A real-time golf snake draft web application with integrated chat for a group of up to 16 friends. The app is used occasionally when a draft event is held — it is not a persistent service. An admin sets up a Google Sheet with player data and user info, starts the backend on their local machine, and participants join via the web to draft golfers in snake order.
