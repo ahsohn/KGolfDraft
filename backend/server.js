@@ -287,6 +287,11 @@ function handleDraftComplete(state) {
   sheets.writeChatLog(chatHistory).catch((err) => {
     console.error("Error saving chat log:", err.message);
   });
+
+  // Save draft board to Google Sheet
+  sheets.writeDraftBoard(state.users, state.picks, state.totalRounds).catch((err) => {
+    console.error("Error saving draft board:", err.message);
+  });
 }
 
 function emitAfterPick(state, complete) {
@@ -310,7 +315,7 @@ function emitPickMade(pick, complete, isAdminOverride = false) {
   const suffix = isAdminOverride ? " (admin pick)" : "";
   const pickMsg = addChatMessage(
     "System",
-    `${pick.userName} picked ${pick.golferName} (Round ${pick.round}, Pick #${pick.pickNumber})${suffix}`,
+    `${pick.userName} picked ${pick.golferName}${suffix}`,
     true
   );
 
@@ -324,7 +329,7 @@ draft.setOnPickCallback((pick, isAutoDraft) => {
   const state = draft.getState();
   const pickMsg = addChatMessage(
     "System",
-    `${pick.userName} auto-drafted ${pick.golferName} (Round ${pick.round}, Pick #${pick.pickNumber})`,
+    `${pick.userName} auto-drafted ${pick.golferName}`,
     true
   );
 
