@@ -18,3 +18,16 @@ body {
   background: #4b5563;
   border-radius: 3px;
 }
+
+/* Slow pulsing background glow when it's the user's turn */
+@keyframes your-turn-pulse {
+  0%, 100% {
+    background-color: rgba(234, 179, 8, 0.05);
+  }
+  50% {
+    background-color: rgba(234, 179, 8, 0.15);
+  }
+}
+.animate-your-turn {
+  animation: your-turn-pulse 3s ease-in-out infinite;
+}

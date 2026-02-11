@@ -145,4 +145,63 @@ async function writeChatLog(messages) {
   console.log(`Chat log saved: ${messages.length} messages`);
 }
 
-module.exports = { init, getPlayers, getUsers, getExistingPicks, writePick, clearPicks, writeChatLog };
+async function writeDraftBoard(users, picks, totalRounds) {
+  const sheetName = "Draft Board";
+
+  // Ensure the tab exists
+  try {
+    const spreadsheet = await sheetsClient.spreadsheets.get({
+      spreadsheetId: sheetId,
+    });
+    const exists = spreadsheet.data.sheets.some(
+      (s) => s.properties.title === sheetName
+    );
+
+    if (exists) {
+      await sheetsClient.spreadsheets.values.clear({
+        spreadsheetId: sheetId,
+        range: `${sheetName}!A:Z`,
+      });
+    } else {
+      await sheetsClient.spreadsheets.batchUpdate({
+        spreadsheetId: sheetId,
+        requestBody: {
+          requests: [
+            { addSheet: { properties: { title: sheetName } } },
+          ],
+        },
+      });
+    }
+  } catch (err) {
+    console.error("Error preparing Draft Board sheet:", err.message);
+    return;
+  }
+
+  const sortedUsers = [...users].sort((a, b) => a.draftOrder - b.draftOrder);
+
+  // Header row: "Round", then each user's name
+  const header = ["Round", ...sortedUsers.map((u) => u.name)];
+  const rows = [header];
+
+  for (let round = 1; round <= totalRounds; round++) {
+    const row = [round];
+    for (const user of sortedUsers) {
+      const pick = picks.find(
+        (p) => p.round === round && p.userEmail === user.email
+      );
+      row.push(pick ? pick.golferName : "");
+    }
+    rows.push(row);
+  }
+
+  await sheetsClient.spreadsheets.values.update({
+    spreadsheetId: sheetId,
+    range: `${sheetName}!A1`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: { values: rows },
+  });
+
+  console.log(`Draft Board saved: ${totalRounds} rounds x ${sortedUsers.length} users`);
+}
+
+module.exports = { init, getPlayers, getUsers, getExistingPicks, writePick, clearPicks, writeChatLog, writeDraftBoard };

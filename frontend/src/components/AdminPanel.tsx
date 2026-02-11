@@ -20,6 +20,7 @@ export default function AdminPanel({
 }: Props) {
   const [rounds, setRounds] = useState(10);
   const [showPanel, setShowPanel] = useState(false);
+  const [adminPickPlayer, setAdminPickPlayer] = useState("");
 
   if (!currentUser.isAdmin) return null;
 
@@ -111,17 +112,32 @@ export default function AdminPanel({
                       </button>
 
                       {isOnClock && (
-                        <button
-                          onClick={() => {
-                            const top = draftState.availablePlayers[0];
-                            if (top) {
-                              onAdminPick(user.email, top.name);
-                            }
-                          }}
-                          className="px-2 py-0.5 rounded bg-red-700 hover:bg-red-600 text-white text-xs"
-                        >
-                          Pick for them
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <select
+                            value={adminPickPlayer}
+                            onChange={(e) => setAdminPickPlayer(e.target.value)}
+                            className="px-1 py-0.5 rounded bg-green-950 border border-yellow-700 text-white text-xs max-w-[140px]"
+                          >
+                            <option value="">Select player...</option>
+                            {draftState.availablePlayers.map((p) => (
+                              <option key={p.name} value={p.name}>
+                                {p.name} (#{p.rank})
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => {
+                              const name = adminPickPlayer || draftState.availablePlayers[0]?.name;
+                              if (name) {
+                                onAdminPick(user.email, name);
+                                setAdminPickPlayer("");
+                              }
+                            }}
+                            className="px-2 py-0.5 rounded bg-red-700 hover:bg-red-600 text-white text-xs whitespace-nowrap"
+                          >
+                            Pick
+                          </button>
+                        </div>
                       )}
                     </div>
                   );

@@ -259,7 +259,7 @@ export default function DraftPage() {
   const myAutoDraft = draftState.autoDraft[currentUser.email] || false;
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className={`h-screen flex flex-col ${isMyTurn ? "animate-your-turn" : ""}`}>
       {/* Header */}
       <header className="bg-green-900 border-b border-green-700 px-4 py-3 flex-shrink-0">
         <div className="flex items-center justify-between flex-wrap gap-2">

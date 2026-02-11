@@ -1,7 +1,35 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { ChatMessage } from "@/lib/types";
+
+const USERNAME_COLORS = [
+  "text-sky-400",
+  "text-rose-400",
+  "text-amber-400",
+  "text-violet-400",
+  "text-emerald-400",
+  "text-pink-400",
+  "text-cyan-400",
+  "text-orange-400",
+  "text-indigo-400",
+  "text-lime-400",
+  "text-fuchsia-400",
+  "text-teal-400",
+  "text-yellow-300",
+  "text-red-400",
+  "text-blue-300",
+  "text-green-300",
+];
+
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
 
 interface Props {
   messages: ChatMessage[];
@@ -11,6 +39,17 @@ interface Props {
 export default function Chat({ messages, onSend }: Props) {
   const [text, setText] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const senderColorMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const msg of messages) {
+      if (!msg.isSystem && !map[msg.sender]) {
+        map[msg.sender] =
+          USERNAME_COLORS[hashString(msg.sender) % USERNAME_COLORS.length];
+      }
+    }
+    return map;
+  }, [messages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -50,7 +89,7 @@ export default function Chat({ messages, onSend }: Props) {
                 <span className="text-green-600 text-xs mr-1">
                   {formatTime(msg.timestamp)}
                 </span>
-                <span className="font-semibold text-green-300">
+                <span className={`font-semibold ${senderColorMap[msg.sender] || "text-green-300"}`}>
                   {msg.sender}:
                 </span>{" "}
                 <span className="text-white">{msg.text}</span>
