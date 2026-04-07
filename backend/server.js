@@ -263,13 +263,6 @@ io.on("connection", (socket) => {
         name: currentUser.name,
         onlineUsers: state.onlineUsers,
       });
-
-      const msg = addChatMessage(
-        "System",
-        `${currentUser.name} disconnected`,
-        true
-      );
-      io.to("draft").emit("chat-message", msg);
     }
   });
 });
