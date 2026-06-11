@@ -2,6 +2,9 @@ const sheets = require("./sheets");
 
 const AUTO_DRAFT_DELAY_MS = 2000;
 
+const DRAFT_THEME =
+  process.env.DRAFT_THEME === "worldcup" ? "worldcup" : "golf";
+
 let state = {
   status: "waiting", // waiting | active | complete
   currentRound: 0,
@@ -28,6 +31,7 @@ function getState() {
     currentPickInRound: state.currentPickInRound,
     totalRounds: state.totalRounds,
     draftFormat: state.draftFormat,
+    theme: DRAFT_THEME,
     overallPick: state.overallPick,
     users: state.users,
     availablePlayers: state.availablePlayers,

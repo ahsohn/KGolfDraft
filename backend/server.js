@@ -46,7 +46,8 @@ function addChatMessage(sender, text, isSystem = false) {
 
 // Health check endpoint
 app.get("/health", (req, res) => {
-  res.json({ status: "ok", draftStatus: draft.getState().status });
+  const state = draft.getState();
+  res.json({ status: "ok", draftStatus: state.status, theme: state.theme });
 });
 
 // --- Socket.IO ---
@@ -122,22 +123,26 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on("start-draft", ({ totalRounds }, callback) => {
+  socket.on("start-draft", ({ totalRounds, draftFormat }, callback) => {
     if (!currentUser || !currentUser.isAdmin) {
       callback({ success: false, error: "Admin access required" });
       return;
     }
 
-    const result = draft.startDraft(totalRounds);
+    const result = draft.startDraft(totalRounds, draftFormat);
     if (result.error) {
       callback({ success: false, error: result.error });
       return;
     }
 
     const state = draft.getState();
+    const formatNote =
+      state.draftFormat === "thirdRoundReversal"
+        ? " (3rd Round Reversal)"
+        : "";
     const msg = addChatMessage(
       "System",
-      `Draft started! ${state.totalRounds} rounds, ${state.users.length} players. Good luck!`,
+      `Draft started! ${state.totalRounds} rounds, ${state.users.length} players${formatNote}. Good luck!`,
       true
     );
 
