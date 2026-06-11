@@ -95,6 +95,7 @@ The admin creates a Google Sheet with three sheets (tabs):
 - Even rounds: pick order goes N → 1 (descending — the "snake" reversal)
 - Draft order position (1 through N) is set per user in the Google Sheet
 - The app handles the snake reversal automatically
+- **3rd Round Reversal format** (admin-selectable at draft start): rounds 1–2 follow standard snake, round 3 repeats the descending direction (no reversal at the round-3 boundary), and normal alternation resumes from round 4 (R1: 1→N, R2: N→1, R3: N→1, R4: 1→N, …)
 
 ### Draft Flow
 1. Admin configures the Google Sheet ID and starts the backend server
@@ -169,7 +170,7 @@ The admin creates a Google Sheet with three sheets (tabs):
 ### Backend (Admin's Computer)
 1. Install Node.js (v18+)
 2. Place the Google Service Account JSON key file in the backend directory
-3. Set environment variables: `GOOGLE_SHEET_ID`, `GOOGLE_SERVICE_ACCOUNT_KEY_PATH`, `PORT=3001`
+3. Set environment variables: `GOOGLE_SHEET_ID`, `GOOGLE_SERVICE_ACCOUNT_KEY_PATH`, `PORT=3001`, and optionally `DRAFT_THEME` (`golf` (default) or `worldcup` — switches the frontend labels and color palette for drafting World Cup countries; the sheet structure is identical, countries go in the Players tab)
 4. Run the server: `npm start`
 5. Start the Cloudflare Tunnel: `cloudflared tunnel run kgolfdraft`
 6. The backend is now accessible at `https://draft-api.ahsdesigns.com`
@@ -236,7 +237,7 @@ KGolfDraft/
 | Event | Payload | Description |
 |-------|---------|-------------|
 | `login` | `{ email, token }` | Authenticate with email or session token |
-| `start-draft` | `{ totalRounds }` | Admin starts the draft |
+| `start-draft` | `{ totalRounds, draftFormat }` | Admin starts the draft (`draftFormat`: `"snake"` or `"thirdRoundReversal"`) |
 | `make-pick` | `{ golferName }` | Current picker selects a golfer |
 | `admin-pick` | `{ userEmail, golferName }` | Admin picks on behalf of a user |
 | `toggle-auto-draft` | `{ enabled }` | Toggle self auto-draft |
