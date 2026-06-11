@@ -15,19 +15,19 @@ export default function MyTeam({ team, currentUser }: Props) {
       </h2>
 
       {team.length === 0 ? (
-        <p className="text-green-500 text-sm px-1">No picks yet</p>
+        <p className="text-theme-500 text-sm px-1">No picks yet</p>
       ) : (
         <div className="space-y-1">
           {team.map((player, idx) => (
             <div
               key={player.name}
-              className="flex justify-between items-center px-3 py-2 rounded bg-green-800/30 text-sm"
+              className="flex justify-between items-center px-3 py-2 rounded bg-theme-800/30 text-sm"
             >
               <span>
-                <span className="text-green-500 mr-2">{idx + 1}.</span>
+                <span className="text-theme-500 mr-2">{idx + 1}.</span>
                 <span className="font-medium">{player.name}</span>
               </span>
-              <span className="text-green-400 text-xs">#{player.rank}</span>
+              <span className="text-theme-400 text-xs">#{player.rank}</span>
             </div>
           ))}
         </div>

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getSocket } from "@/lib/socket";
 import { DraftState, User, ChatMessage } from "@/lib/types";
+import { getTheme, applyThemeAttr } from "@/lib/themes";
 import PlayerList from "@/components/PlayerList";
 import DraftBoard from "@/components/DraftBoard";
 import Chat from "@/components/Chat";
@@ -146,6 +147,12 @@ export default function DraftPage() {
     };
   }, [router]);
 
+  useEffect(() => {
+    if (draftState?.theme) {
+      applyThemeAttr(draftState.theme);
+    }
+  }, [draftState?.theme]);
+
   const handlePick = useCallback(
     (golferName: string) => {
       const socket = getSocket();
@@ -178,18 +185,21 @@ export default function DraftPage() {
     []
   );
 
-  const handleStartDraft = useCallback((totalRounds: number) => {
-    const socket = getSocket();
-    socket.emit(
-      "start-draft",
-      { totalRounds },
-      (res: { success: boolean; error?: string }) => {
-        if (!res.success) {
-          alert(res.error || "Failed to start draft");
+  const handleStartDraft = useCallback(
+    (totalRounds: number, draftFormat: string) => {
+      const socket = getSocket();
+      socket.emit(
+        "start-draft",
+        { totalRounds, draftFormat },
+        (res: { success: boolean; error?: string }) => {
+          if (!res.success) {
+            alert(res.error || "Failed to start draft");
+          }
         }
-      }
-    );
-  }, []);
+      );
+    },
+    []
+  );
 
   const handleToggleAutoDraft = useCallback(() => {
     if (!currentUser || !draftState) return;
@@ -244,7 +254,7 @@ export default function DraftPage() {
   if (!currentUser || !draftState) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-green-400 text-lg">
+        <p className="text-theme-400 text-lg">
           {connected ? "Loading draft..." : "Connecting to server..."}
         </p>
       </div>
@@ -261,10 +271,12 @@ export default function DraftPage() {
   return (
     <div className={`h-screen flex flex-col ${isMyTurn ? "animate-your-turn" : ""}`}>
       {/* Header */}
-      <header className="bg-green-900 border-b border-green-700 px-4 py-3 flex-shrink-0">
+      <header className="bg-theme-900 border-b border-theme-700 px-4 py-3 flex-shrink-0">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold">KGolfDraft</h1>
+            <h1 className="text-xl font-bold">
+              {getTheme(draftState.theme).appTitle}
+            </h1>
             <span
               className={`text-xs px-2 py-0.5 rounded-full ${
                 draftState.status === "waiting"
@@ -280,6 +292,12 @@ export default function DraftPage() {
                 ? `Round ${draftState.currentRound}/${draftState.totalRounds}`
                 : "Complete"}
             </span>
+            {draftState.draftFormat === "thirdRoundReversal" &&
+              draftState.status !== "waiting" && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-theme-700">
+                  3rd Round Reversal
+                </span>
+              )}
           </div>
 
           <div className="flex items-center gap-3 text-sm">
@@ -291,7 +309,7 @@ export default function DraftPage() {
                   </span>
                 )}
                 {!isMyTurn && draftState.currentPicker && (
-                  <span className="text-green-300">
+                  <span className="text-theme-300">
                     {draftState.currentPicker.name} is picking...
                   </span>
                 )}
@@ -307,13 +325,13 @@ export default function DraftPage() {
                 </button>
               </>
             )}
-            <span className="text-green-400">{currentUser.name}</span>
+            <span className="text-theme-400">{currentUser.name}</span>
             {currentUser.isAdmin && (
               <span className="text-yellow-400 text-xs">(Admin)</span>
             )}
             <button
               onClick={handleLogout}
-              className="text-green-500 hover:text-green-300 text-xs underline"
+              className="text-theme-500 hover:text-theme-300 text-xs underline"
             >
               Logout
             </button>
@@ -335,7 +353,7 @@ export default function DraftPage() {
       {/* Main content - 3 column layout on desktop, stacked on mobile */}
       <main className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 p-4">
         {/* Left: Available Players */}
-        <div className="lg:w-64 xl:w-72 flex-shrink-0 h-64 lg:h-full bg-green-900/40 rounded-lg p-3">
+        <div className="lg:w-64 xl:w-72 flex-shrink-0 h-64 lg:h-full bg-theme-900/40 rounded-lg p-3">
           <PlayerList
             draftState={draftState}
             currentUser={currentUser}
@@ -355,16 +373,16 @@ export default function DraftPage() {
 
         {/* Center: Draft Board + My Team */}
         <div className="flex-1 min-w-0 flex flex-col gap-3 h-96 lg:h-full">
-          <div className="flex-1 min-h-0 bg-green-900/40 rounded-lg p-3 overflow-hidden">
+          <div className="flex-1 min-h-0 bg-theme-900/40 rounded-lg p-3 overflow-hidden">
             <DraftBoard draftState={draftState} currentUser={currentUser} />
           </div>
-          <div className="flex-shrink-0 bg-green-900/40 rounded-lg p-3 max-h-48 overflow-y-auto scroll-thin">
+          <div className="flex-shrink-0 bg-theme-900/40 rounded-lg p-3 max-h-48 overflow-y-auto scroll-thin">
             <MyTeam team={myTeam} currentUser={currentUser} />
           </div>
         </div>
 
         {/* Right: Chat */}
-        <div className="lg:w-72 xl:w-80 flex-shrink-0 h-72 lg:h-full bg-green-900/40 rounded-lg p-3">
+        <div className="lg:w-72 xl:w-80 flex-shrink-0 h-72 lg:h-full bg-theme-900/40 rounded-lg p-3">
           <Chat messages={messages} onSend={handleSendChat} />
         </div>
       </main>

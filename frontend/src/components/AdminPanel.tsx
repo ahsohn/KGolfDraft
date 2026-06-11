@@ -6,7 +6,7 @@ import { DraftState, User } from "@/lib/types";
 interface Props {
   draftState: DraftState;
   currentUser: User;
-  onStartDraft: (totalRounds: number) => void;
+  onStartDraft: (totalRounds: number, draftFormat: string) => void;
   onAdminPick: (userEmail: string, golferName: string) => void;
   onAdminToggleAutoDraft: (userEmail: string, enabled: boolean) => void;
 }
@@ -19,6 +19,7 @@ export default function AdminPanel({
   onAdminToggleAutoDraft,
 }: Props) {
   const [rounds, setRounds] = useState(10);
+  const [draftFormat, setDraftFormat] = useState("snake");
   const [showPanel, setShowPanel] = useState(false);
   const [adminPickPlayer, setAdminPickPlayer] = useState("");
 
@@ -50,16 +51,29 @@ export default function AdminPanel({
                   max={20}
                   value={rounds}
                   onChange={(e) => setRounds(Number(e.target.value))}
-                  className="w-20 px-2 py-1 rounded bg-green-950 border border-yellow-700 text-white text-sm focus:outline-none"
+                  className="w-20 px-2 py-1 rounded bg-theme-950 border border-yellow-700 text-white text-sm focus:outline-none"
                 />
               </div>
+              <div>
+                <label className="block text-xs text-yellow-200 mb-1">
+                  Draft Format
+                </label>
+                <select
+                  value={draftFormat}
+                  onChange={(e) => setDraftFormat(e.target.value)}
+                  className="px-2 py-1 rounded bg-theme-950 border border-yellow-700 text-white text-sm focus:outline-none"
+                >
+                  <option value="snake">Standard Snake</option>
+                  <option value="thirdRoundReversal">3rd Round Reversal</option>
+                </select>
+              </div>
               <button
-                onClick={() => onStartDraft(rounds)}
+                onClick={() => onStartDraft(rounds, draftFormat)}
                 className="px-4 py-1.5 rounded bg-yellow-600 hover:bg-yellow-500 text-white text-sm font-medium transition-colors"
               >
                 Start Draft
               </button>
-              <span className="text-xs text-green-400">
+              <span className="text-xs text-theme-400">
                 {draftState.onlineUsers.length} of{" "}
                 {draftState.users.length} online
               </span>
@@ -116,7 +130,7 @@ export default function AdminPanel({
                           <select
                             value={adminPickPlayer}
                             onChange={(e) => setAdminPickPlayer(e.target.value)}
-                            className="px-1 py-0.5 rounded bg-green-950 border border-yellow-700 text-white text-xs max-w-[140px]"
+                            className="px-1 py-0.5 rounded bg-theme-950 border border-yellow-700 text-white text-xs max-w-[140px]"
                           >
                             <option value="">Select player...</option>
                             {draftState.availablePlayers.map((p) => (

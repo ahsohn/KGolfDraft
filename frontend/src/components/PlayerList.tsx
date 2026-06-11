@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Player, DraftState, User } from "@/lib/types";
+import { getTheme } from "@/lib/themes";
 
 interface Props {
   draftState: DraftState;
@@ -19,6 +20,8 @@ export default function PlayerList({ draftState, currentUser, onPick }: Props) {
   const canPick =
     isMyTurn ||
     (currentUser.isAdmin && draftState.status === "active");
+
+  const theme = getTheme(draftState.theme);
 
   const filtered = draftState.availablePlayers.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase())
@@ -38,15 +41,15 @@ export default function PlayerList({ draftState, currentUser, onPick }: Props) {
   return (
     <div className="flex flex-col h-full">
       <h2 className="text-lg font-bold mb-2 px-1">
-        Available Players ({draftState.availablePlayers.length})
+        {theme.availableHeading} ({draftState.availablePlayers.length})
       </h2>
 
       <input
         type="text"
-        placeholder="Search players..."
+        placeholder={theme.searchPlaceholder}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="w-full px-3 py-2 mb-2 rounded bg-green-950 border border-green-700 text-white placeholder-green-600 text-sm focus:outline-none focus:ring-1 focus:ring-green-500"
+        className="w-full px-3 py-2 mb-2 rounded bg-theme-950 border border-theme-700 text-white placeholder-theme-600 text-sm focus:outline-none focus:ring-1 focus:ring-theme-500"
       />
 
       <div className="flex-1 overflow-y-auto scroll-thin space-y-1">
@@ -57,18 +60,18 @@ export default function PlayerList({ draftState, currentUser, onPick }: Props) {
             disabled={!canPick}
             className={`w-full text-left px-3 py-2 rounded text-sm flex justify-between items-center transition-colors ${
               canPick
-                ? "hover:bg-green-700 cursor-pointer"
+                ? "hover:bg-theme-700 cursor-pointer"
                 : "cursor-default opacity-80"
             } ${
-              isMyTurn ? "bg-green-800/50" : "bg-green-900/30"
+              isMyTurn ? "bg-theme-800/50" : "bg-theme-900/30"
             }`}
           >
             <span className="font-medium">{player.name}</span>
-            <span className="text-green-400 text-xs">#{player.rank}</span>
+            <span className="text-theme-400 text-xs">#{player.rank}</span>
           </button>
         ))}
         {filtered.length === 0 && (
-          <p className="text-green-500 text-sm text-center py-4">
+          <p className="text-theme-500 text-sm text-center py-4">
             No players found
           </p>
         )}

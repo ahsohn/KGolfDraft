@@ -18,14 +18,6 @@ export default function DraftBoard({ draftState, currentUser }: Props) {
     );
   }
 
-  // Determine which column index in a given round corresponds to which user
-  function getUserForRoundSlot(round: number, slotIndex: number) {
-    // Odd rounds: ascending, even rounds: descending
-    if (round % 2 === 0) {
-      return sortedUsers[sortedUsers.length - 1 - slotIndex];
-    }
-    return sortedUsers[slotIndex];
-  }
 
   const rounds = [];
   for (let r = 1; r <= totalRounds; r++) {
@@ -40,20 +32,20 @@ export default function DraftBoard({ draftState, currentUser }: Props) {
         <table className="w-full text-sm border-collapse min-w-[600px]">
           <thead>
             <tr>
-              <th className="sticky top-0 left-0 z-20 bg-green-900 px-2 py-2 text-left text-xs text-green-300 border-b border-green-700">
+              <th className="sticky top-0 left-0 z-20 bg-theme-900 px-2 py-2 text-left text-xs text-theme-300 border-b border-theme-700">
                 Rd
               </th>
               {sortedUsers.map((user) => (
                 <th
                   key={user.email}
-                  className={`sticky top-0 z-10 bg-green-900 px-2 py-2 text-center text-xs border-b border-green-700 ${
+                  className={`sticky top-0 z-10 bg-theme-900 px-2 py-2 text-center text-xs border-b border-theme-700 ${
                     user.email === currentUser.email
                       ? "text-yellow-300"
-                      : "text-green-300"
+                      : "text-theme-300"
                   }`}
                 >
                   <div>{user.name}</div>
-                  <div className="text-green-500 font-normal">
+                  <div className="text-theme-500 font-normal">
                     #{user.draftOrder}
                   </div>
                 </th>
@@ -63,7 +55,7 @@ export default function DraftBoard({ draftState, currentUser }: Props) {
           <tbody>
             {rounds.map((round) => (
               <tr key={round}>
-                <td className="sticky left-0 z-10 bg-green-900 px-2 py-1 text-green-400 font-mono text-xs border-b border-green-800">
+                <td className="sticky left-0 z-10 bg-theme-900 px-2 py-1 text-theme-400 font-mono text-xs border-b border-theme-800">
                   {round}
                 </td>
                 {sortedUsers.map((user) => {
@@ -76,11 +68,11 @@ export default function DraftBoard({ draftState, currentUser }: Props) {
                   return (
                     <td
                       key={user.email}
-                      className={`px-2 py-1 text-center text-xs border-b border-green-800 ${
+                      className={`px-2 py-1 text-center text-xs border-b border-theme-800 ${
                         isCurrentPick
                           ? "bg-yellow-900/40 ring-1 ring-yellow-500/50"
                           : pick
-                          ? "bg-green-800/30"
+                          ? "bg-theme-800/30"
                           : ""
                       }`}
                     >
