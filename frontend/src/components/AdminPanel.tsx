@@ -49,9 +49,15 @@ export default function AdminPanel({
                   type="number"
                   min={1}
                   max={20}
-                  value={rounds}
+                  value={draftFormat === "thirdRoundReversal" ? 6 : rounds}
+                  disabled={draftFormat === "thirdRoundReversal"}
+                  title={
+                    draftFormat === "thirdRoundReversal"
+                      ? "Rounds are fixed at 6 for 3rd Round Reversal"
+                      : undefined
+                  }
                   onChange={(e) => setRounds(Number(e.target.value))}
-                  className="w-20 px-2 py-1 rounded bg-theme-950 border border-yellow-700 text-white text-sm focus:outline-none"
+                  className="w-20 px-2 py-1 rounded bg-theme-950 border border-yellow-700 text-white text-sm focus:outline-none disabled:opacity-50"
                 />
               </div>
               <div>
