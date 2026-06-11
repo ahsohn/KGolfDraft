@@ -2,6 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Theme palettes — golf (green, default) and worldcup (blue/navy).
+   Values are R G B triplets so Tailwind alpha modifiers keep working. */
+:root {
+  --theme-200: 187 247 208;
+  --theme-300: 134 239 172;
+  --theme-400: 74 222 128;
+  --theme-500: 34 197 94;
+  --theme-600: 22 163 74;
+  --theme-700: 21 128 61;
+  --theme-800: 22 101 52;
+  --theme-900: 20 83 45;
+  --theme-950: 5 46 22;
+}
+
+[data-theme="worldcup"] {
+  --theme-200: 191 219 254;
+  --theme-300: 147 197 253;
+  --theme-400: 96 165 250;
+  --theme-500: 59 130 246;
+  --theme-600: 37 99 235;
+  --theme-700: 29 78 216;
+  --theme-800: 30 64 175;
+  --theme-900: 30 58 138;
+  --theme-950: 23 37 84;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;

@@ -23,6 +23,8 @@ export interface DraftState {
   currentRound: number;
   currentPickInRound: number;
   totalRounds: number;
+  draftFormat: "snake" | "thirdRoundReversal";
+  theme: "golf" | "worldcup";
   overallPick: number;
   users: User[];
   availablePlayers: Player[];
