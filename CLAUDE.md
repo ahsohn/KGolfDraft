@@ -95,10 +95,10 @@ The admin creates a Google Sheet with three sheets (tabs):
 - Even rounds: pick order goes N → 1 (descending — the "snake" reversal)
 - Draft order position (1 through N) is set per user in the Google Sheet
 - The app handles the snake reversal automatically
-- **3rd Round Reversal format** (admin-selectable at draft start): a fixed 6-round, 47-pick order for 8 teams that includes compensatory picks for teams 7 and 8. Rounds have varying lengths, so the order is defined explicitly (by draft-order position) rather than computed:
+- **3rd Round Reversal format** (admin-selectable at draft start): a fixed 6-round, 48-pick order for 8 teams that includes compensatory picks for teams 7 and 8. Rounds have varying lengths, so the order is defined explicitly (by draft-order position) rather than computed:
   - R1: 1, 2, 3, 4, 5, 6, 7, 8
   - R2: 8, 7, 6, 5, 4, 3, 8, 7, 2, 1 (teams 8 and 7 each get a compensatory pick)
-  - R3: 8, 7, 6, 4, 3, 2, 1 (team 5 has no pick)
+  - R3: 8, 7, 6, 5, 4, 3, 2, 1
   - R4: 1, 2, 3, 4, 5, 6, 7, 8
   - R5: 8, 7, 6, 5, 4, 3, 2, 1
   - R6: 1, 2, 3, 4, 5, 6 (teams 7 and 8 have no pick)
