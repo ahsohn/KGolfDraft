@@ -7,6 +7,7 @@ let state = {
   currentRound: 0,
   currentPickInRound: 0,
   totalRounds: 10,
+  draftFormat: "snake", // snake | thirdRoundReversal
   overallPick: 0,
   users: [],
   players: [],
@@ -26,6 +27,7 @@ function getState() {
     currentRound: state.currentRound,
     currentPickInRound: state.currentPickInRound,
     totalRounds: state.totalRounds,
+    draftFormat: state.draftFormat,
     overallPick: state.overallPick,
     users: state.users,
     availablePlayers: state.availablePlayers,
@@ -46,10 +48,17 @@ function getCurrentPicker() {
   return order[state.currentPickInRound];
 }
 
+function isDescendingRound(round, draftFormat) {
+  if (draftFormat === "thirdRoundReversal" && round >= 3) {
+    // Round 3 repeats the descending direction, alternation resumes after
+    return round % 2 === 1;
+  }
+  return round % 2 === 0;
+}
+
 function getPickOrderForRound(round) {
   const sorted = [...state.users].sort((a, b) => a.draftOrder - b.draftOrder);
-  // Odd rounds: ascending, even rounds: descending (snake)
-  if (round % 2 === 0) {
+  if (isDescendingRound(round, state.draftFormat)) {
     return sorted.reverse();
   }
   return sorted;
@@ -99,10 +108,12 @@ function setOnPickCallback(cb) {
   onPickCallback = cb;
 }
 
-function startDraft(totalRounds) {
+function startDraft(totalRounds, draftFormat) {
   if (state.status === "active") return { error: "Draft already in progress" };
 
   state.totalRounds = totalRounds || 10;
+  state.draftFormat =
+    draftFormat === "thirdRoundReversal" ? "thirdRoundReversal" : "snake";
 
   if (state.picks.length > 0) {
     // Resume from existing picks
@@ -257,4 +268,5 @@ module.exports = {
   setUserOffline,
   setOnPickCallback,
   getCurrentPicker,
+  isDescendingRound,
 };
