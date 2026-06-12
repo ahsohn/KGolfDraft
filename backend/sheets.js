@@ -186,10 +186,11 @@ async function writeDraftBoard(users, picks, totalRounds) {
   for (let round = 1; round <= totalRounds; round++) {
     const row = [round];
     for (const user of sortedUsers) {
-      const pick = picks.find(
+      // A user can have multiple picks in a round (compensatory picks)
+      const cellPicks = picks.filter(
         (p) => p.round === round && p.userEmail === user.email
       );
-      row.push(pick ? pick.golferName : "");
+      row.push(cellPicks.map((p) => p.golferName).join(", "));
     }
     rows.push(row);
   }

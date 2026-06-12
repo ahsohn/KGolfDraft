@@ -52,17 +52,31 @@ function getCurrentPicker() {
   return order[state.currentPickInRound];
 }
 
-function isDescendingRound(round, draftFormat) {
-  if (draftFormat === "thirdRoundReversal" && round >= 3) {
-    // Round 3 repeats the descending direction, alternation resumes after
-    return round % 2 === 1;
-  }
+// 3rd Round Reversal format: a fixed 6-round order (by draft-order position)
+// with compensatory picks for teams 7 and 8 in round 2. Rounds have varying
+// lengths, so the order is defined explicitly rather than computed.
+const THIRD_ROUND_REVERSAL_ORDER = [
+  [1, 2, 3, 4, 5, 6, 7, 8],
+  [8, 7, 6, 5, 4, 3, 8, 7, 2, 1],
+  [8, 7, 6, 5, 4, 3, 2, 1],
+  [1, 2, 3, 4, 5, 6, 7, 8],
+  [8, 7, 6, 5, 4, 3, 2, 1],
+  [1, 2, 3, 4, 5, 6],
+];
+
+function isDescendingRound(round) {
   return round % 2 === 0;
 }
 
 function getPickOrderForRound(round) {
   const sorted = [...state.users].sort((a, b) => a.draftOrder - b.draftOrder);
-  if (isDescendingRound(round, state.draftFormat)) {
+  if (state.draftFormat === "thirdRoundReversal") {
+    const positions = THIRD_ROUND_REVERSAL_ORDER[round - 1] || [];
+    return positions
+      .map((pos) => sorted.find((u) => u.draftOrder === pos))
+      .filter(Boolean);
+  }
+  if (isDescendingRound(round)) {
     return sorted.reverse();
   }
   return sorted;
@@ -115,17 +129,27 @@ function setOnPickCallback(cb) {
 function startDraft(totalRounds, draftFormat) {
   if (state.status === "active") return { error: "Draft already in progress" };
 
-  state.totalRounds = totalRounds || 10;
   state.draftFormat =
     draftFormat === "thirdRoundReversal" ? "thirdRoundReversal" : "snake";
+  // 3rd Round Reversal has a fixed pick order, so its round count is fixed too
+  state.totalRounds =
+    state.draftFormat === "thirdRoundReversal"
+      ? THIRD_ROUND_REVERSAL_ORDER.length
+      : totalRounds || 10;
 
   if (state.picks.length > 0) {
-    // Resume from existing picks
+    // Resume from existing picks — rounds can have different lengths
     state.overallPick = state.picks.length;
-    state.currentRound =
-      Math.floor(state.overallPick / state.users.length) + 1;
-    state.currentPickInRound =
-      state.overallPick % state.users.length;
+    let remaining = state.overallPick;
+    let round = 1;
+    while (round <= state.totalRounds) {
+      const roundLength = getPickOrderForRound(round).length;
+      if (remaining < roundLength) break;
+      remaining -= roundLength;
+      round++;
+    }
+    state.currentRound = round;
+    state.currentPickInRound = remaining;
   } else {
     state.currentRound = 1;
     state.currentPickInRound = 0;
@@ -191,7 +215,7 @@ function makePick(userEmail, golferName, isAdminOverride = false) {
 
   // Advance to next pick
   state.currentPickInRound++;
-  if (state.currentPickInRound >= state.users.length) {
+  if (state.currentPickInRound >= getPickOrderForRound(state.currentRound).length) {
     state.currentRound++;
     state.currentPickInRound = 0;
 

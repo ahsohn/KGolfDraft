@@ -11,9 +11,10 @@ export default function DraftBoard({ draftState, currentUser }: Props) {
   const { users, picks, totalRounds, status } = draftState;
   const sortedUsers = [...users].sort((a, b) => a.draftOrder - b.draftOrder);
 
-  // Build a grid: rows = rounds, columns = users (in draft order)
-  function getPickForCell(round: number, user: User) {
-    return picks.find(
+  // Build a grid: rows = rounds, columns = users (in draft order).
+  // A user can have multiple picks in a round (compensatory picks).
+  function getPicksForCell(round: number, user: User) {
+    return picks.filter(
       (p) => p.round === round && p.userEmail === user.email
     );
   }
@@ -59,7 +60,7 @@ export default function DraftBoard({ draftState, currentUser }: Props) {
                   {round}
                 </td>
                 {sortedUsers.map((user) => {
-                  const pick = getPickForCell(round, user);
+                  const cellPicks = getPicksForCell(round, user);
                   const isCurrentPick =
                     status === "active" &&
                     draftState.currentRound === round &&
@@ -71,20 +72,24 @@ export default function DraftBoard({ draftState, currentUser }: Props) {
                       className={`px-2 py-1 text-center text-xs border-b border-theme-800 ${
                         isCurrentPick
                           ? "bg-yellow-900/40 ring-1 ring-yellow-500/50"
-                          : pick
+                          : cellPicks.length > 0
                           ? "bg-theme-800/30"
                           : ""
                       }`}
                     >
-                      {pick ? (
-                        <span className="text-white font-medium">
+                      {cellPicks.map((pick) => (
+                        <div
+                          key={pick.pickNumber}
+                          className="text-white font-medium"
+                        >
                           {pick.golferName}
-                        </span>
-                      ) : isCurrentPick ? (
-                        <span className="text-yellow-400 animate-pulse">
+                        </div>
+                      ))}
+                      {isCurrentPick && (
+                        <div className="text-yellow-400 animate-pulse">
                           ...
-                        </span>
-                      ) : null}
+                        </div>
+                      )}
                     </td>
                   );
                 })}
