@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DraftState, User } from "@/lib/types";
+import ConfirmAction from "./ConfirmAction";
 
 interface Props {
   draftState: DraftState;
@@ -9,6 +10,7 @@ interface Props {
   onStartDraft: (totalRounds: number, draftFormat: string) => void;
   onAdminPick: (userEmail: string, golferName: string) => void;
   onAdminToggleAutoDraft: (userEmail: string, enabled: boolean) => void;
+  onUndoPick: () => void;
 }
 
 export default function AdminPanel({
@@ -17,13 +19,37 @@ export default function AdminPanel({
   onStartDraft,
   onAdminPick,
   onAdminToggleAutoDraft,
+  onUndoPick,
 }: Props) {
-  const [rounds, setRounds] = useState(10);
-  const [draftFormat, setDraftFormat] = useState("snake");
+  const [rounds, setRounds] = useState(draftState.totalRounds || 10);
+  const [draftFormat, setDraftFormat] = useState<string>(
+    draftState.draftFormat || "snake"
+  );
   const [showPanel, setShowPanel] = useState(false);
   const [adminPickPlayer, setAdminPickPlayer] = useState("");
 
+  // Re-sync the start-draft defaults when the super-admin switches drafts
+  useEffect(() => {
+    setRounds(draftState.totalRounds || 10);
+    setDraftFormat(draftState.draftFormat || "snake");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftState.draftId]);
+
   if (!currentUser.isAdmin) return null;
+
+  const backendUrl =
+    process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+  const csvUrl =
+    draftState.draftId != null && typeof window !== "undefined"
+      ? `${backendUrl}/api/drafts/${draftState.draftId}/export.csv?token=${
+          localStorage.getItem("kgolfdraft_token") || ""
+        }`
+      : null;
+
+  const canUndo =
+    currentUser.isSuperAdmin &&
+    draftState.picks.length > 0 &&
+    (draftState.status === "active" || draftState.status === "complete");
 
   return (
     <div className="mb-4">
@@ -168,6 +194,29 @@ export default function AdminPanel({
 
           {draftState.status === "complete" && (
             <p className="text-sm text-yellow-200">Draft is complete.</p>
+          )}
+
+          {/* Super-admin / export tools */}
+          {(canUndo || (csvUrl && draftState.picks.length > 0)) && (
+            <div className="flex items-center gap-3 pt-1 border-t border-yellow-700/30">
+              {canUndo && (
+                <ConfirmAction
+                  label="Undo Last Pick"
+                  confirmLabel="Confirm Undo"
+                  onConfirm={onUndoPick}
+                  className="px-3 py-1 rounded bg-purple-700 hover:bg-purple-600 text-white text-xs font-medium"
+                  confirmClassName="px-3 py-1 rounded bg-red-700 hover:bg-red-600 text-white text-xs font-medium"
+                />
+              )}
+              {csvUrl && draftState.picks.length > 0 && (
+                <a
+                  href={csvUrl}
+                  className="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium"
+                >
+                  Download Results CSV
+                </a>
+              )}
+            </div>
           )}
         </div>
       )}

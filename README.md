@@ -1,6 +1,6 @@
 # KGolfDraft
 
-A real-time golf snake draft web app with integrated chat. Built for a group of friends to draft golfers in snake order — runs occasionally when a draft event is held.
+A real-time golf snake draft web app with integrated chat. Built for a group of friends to draft golfers in snake order — runs occasionally when a draft event is held. All data (users, drafts, picks, chat, history) lives in a Neon Postgres database.
 
 **Live at:** [golfdraft.ahsdesigns.com](https://golfdraft.ahsdesigns.com)
 
@@ -9,7 +9,7 @@ A real-time golf snake draft web app with integrated chat. Built for a group of 
 ## Prerequisites
 
 - **Node.js v18+** — [Download](https://nodejs.org/)
-- **A Google account** — for Google Cloud and Google Sheets
+- **A Neon account** — free serverless Postgres at [neon.tech](https://neon.tech)
 - **A Cloudflare account** — for the tunnel (free tier is fine)
 - **`cloudflared` CLI** — [Download](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/)
 
@@ -17,62 +17,30 @@ A real-time golf snake draft web app with integrated chat. Built for a group of 
 
 ## Setup Guide
 
-### Step 1: Google Cloud Service Account
+### Step 1: Neon Database
 
-This allows the backend to read/write your Google Sheet programmatically.
+1. Go to [neon.tech](https://neon.tech) and create a project (e.g., `kgolfdraft`)
+2. On the project dashboard, click **Connect** and copy the **connection string** (looks like `postgresql://user:password@ep-xxx.aws.neon.tech/neondb?sslmode=require`)
+3. That's it — the backend creates all tables automatically on first start, and seeds the super-admin account
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project (or use an existing one)
-3. Navigate to **APIs & Services > Library**
-4. Search for **Google Sheets API** and click **Enable**
-5. Navigate to **APIs & Services > Credentials**
-6. Click **Create Credentials > Service Account**
-   - Give it a name (e.g., `kgolfdraft`)
-   - Click **Done** (no need to grant additional roles)
-7. Click on the newly created service account
-8. Go to the **Keys** tab
-9. Click **Add Key > Create new key > JSON**
-10. Save the downloaded JSON file — you'll need it later
+### Step 2: Backend Setup
 
-**Important:** Note the service account's email address (looks like `kgolfdraft@yourproject.iam.gserviceaccount.com`). You'll need it in Step 2.
+1. Clone this repo on your computer
+2. Create a `.env` file in `backend/` (see `backend/.env.example`):
 
-### Step 2: Create the Google Sheet
+```bash
+PORT=3001
+DATABASE_URL=postgresql://user:password@ep-xxx.aws.neon.tech/neondb?sslmode=require
+SUPER_ADMIN_PIN=your-secret-pin
+SUPER_ADMIN_EMAIL=ahsohn@gmail.com
+```
 
-1. Go to [Google Sheets](https://sheets.google.com) and create a new spreadsheet
-2. **Share the sheet** with your service account email (from Step 1) — give it **Editor** access
-3. Note the **Sheet ID** from the URL: `https://docs.google.com/spreadsheets/d/SHEET_ID_HERE/edit`
+3. Install dependencies:
 
-Create three tabs with these exact names and headers:
-
-#### Tab: `Players`
-
-| Name | Rank |
-|------|------|
-| Scottie Scheffler | 1 |
-| Xander Schauffele | 2 |
-| Rory McIlroy | 3 |
-| ... | ... |
-
-#### Tab: `Users`
-
-| Email | Name | Draft Order | Is Admin |
-|-------|------|-------------|----------|
-| you@email.com | Your Name | 1 | TRUE |
-| friend1@email.com | Friend 1 | 2 | FALSE |
-| friend2@email.com | Friend 2 | 3 | FALSE |
-| ... | ... | ... | ... |
-
-- **Draft Order** determines pick order (1 picks first in odd rounds, last in even rounds)
-- **Is Admin** should be `TRUE` for you and anyone else who should be able to start the draft or pick on behalf of others
-
-#### Tab: `Picks`
-
-| Round | Pick Number | User Email | User Name | Golfer Name |
-|-------|-------------|------------|-----------|-------------|
-
-Leave the data rows empty — just add the headers. This sheet is populated automatically during the draft.
-
-A **Chat Log** tab will also be created automatically when the draft finishes.
+```bash
+cd backend
+npm install
+```
 
 ### Step 3: Cloudflare Tunnel (one-time setup)
 
@@ -127,26 +95,18 @@ Replace `<TUNNEL_ID>` with the ID printed when you created the tunnel (also visi
    - **Target:** `cname.vercel-dns.com`
    - **Proxy status:** DNS only (gray cloud, NOT proxied)
 
-### Step 5: Backend Setup
-
-1. Clone this repo on your computer
-2. Copy the service account JSON key file into the `backend/` directory
-3. Create a `.env` file in `backend/`:
-
-```bash
-PORT=3001
-GOOGLE_SHEET_ID=your_sheet_id_here
-GOOGLE_SERVICE_ACCOUNT_KEY_PATH=./service-account-key.json
-```
-
-4. Install dependencies:
-
-```bash
-cd backend
-npm install
-```
-
 ---
+
+## Setting Up a Draft (Super Admin)
+
+1. Start the backend and tunnel (see below), then log in at [golfdraft.ahsdesigns.com](https://golfdraft.ahsdesigns.com) with the super-admin email — you'll be asked for your PIN
+2. Click **Super Admin** in the header to open the Super Admin panel
+3. In **Group Users**, add your friends (email + display name); check **Admin** for anyone who should be able to start the draft or pick on behalf of others
+4. In **Drafts**, create a new draft (name, theme, format, rounds)
+5. Select the draft, paste the **player list** (`Name, Rank` — one per line), and pick the **participants** and their draft order (not everyone in the group has to play in every draft)
+6. Click **Make Current** — the draft is now what everyone sees at the site
+
+Past drafts stay in the Drafts list forever, with results viewable and downloadable as CSV.
 
 ## Running a Draft
 
@@ -161,8 +121,8 @@ npm start
 
 You should see:
 ```
-Google Sheets API initialized
-Initialized: X players, Y users, 0 existing picks
+Postgres (Neon) initialized
+Loaded draft "..." (#N): X players, Y participants, 0 picks, status=waiting
 Server running on port 3001
 ```
 
@@ -176,21 +136,21 @@ cloudflared tunnel run kgolfdraft
 
 ### 3. Share the link
 
-Tell your friends to go to **[golfdraft.ahsdesigns.com](https://golfdraft.ahsdesigns.com)** and log in with the email you put in the Users sheet.
+Tell your friends to go to **[golfdraft.ahsdesigns.com](https://golfdraft.ahsdesigns.com)** and log in with the email you added them with.
 
 ### 4. Start the draft
 
 Once enough people are logged in:
 1. Click **Show Admin Panel**
-2. Set the number of rounds
+2. Confirm rounds/format (pre-filled from the draft's settings)
 3. Click **Start Draft**
 
-### 5. After the draft
+### 5. During and after the draft
 
-When the last pick is made:
-- The draft board shows the final results
-- All picks are saved in the **Picks** tab of your Google Sheet
-- The full chat log is saved in a **Chat Log** tab
+- Every pick is saved to Postgres immediately — if the backend restarts, it resumes right where it left off
+- The super-admin can **Undo Last Pick** (admin panel on the draft page, or the Super Admin panel) if someone mis-picks
+- When the last pick is made, the draft is marked complete and its results stay in the history
+- **Download Results CSV** from the admin panel or the Super Admin panel
 
 To shut down, press `Ctrl+C` in both terminal windows (server and tunnel).
 
@@ -198,9 +158,9 @@ To shut down, press `Ctrl+C` in both terminal windows (server and tunnel).
 
 ## Draft Day Checklist
 
-- [ ] Google Sheet is populated with **Players** (name + rank) and **Users** (email, name, draft order, admin flag)
-- [ ] **Picks** tab has headers only (no leftover data from a previous draft)
-- [ ] Backend `.env` file has the correct `GOOGLE_SHEET_ID`
+- [ ] Draft created in the Super Admin panel with players, participants, and draft order
+- [ ] Draft is set as **Current**
+- [ ] Backend `.env` has `DATABASE_URL` and `SUPER_ADMIN_PIN`
 - [ ] Run `npm start` in the `backend/` directory
 - [ ] Run `cloudflared tunnel run kgolfdraft` in a separate terminal
 - [ ] Verify the server is reachable: visit `https://draft-api.ahsdesigns.com/health` in a browser
@@ -216,7 +176,7 @@ For developing/testing without Cloudflare Tunnel:
 ```bash
 # Terminal 1: Backend
 cd backend
-cp .env.example .env    # Edit with your Google Sheet ID and key path
+cp .env.example .env    # Edit with your Neon DATABASE_URL and PIN
 npm install
 npm run dev             # Starts on localhost:3001 with hot reload
 
@@ -226,6 +186,8 @@ echo "NEXT_PUBLIC_BACKEND_URL=http://localhost:3001" > .env.local
 npm install
 npm run dev             # Starts on localhost:3000
 ```
+
+Run the backend's draft-logic tests (no database needed) with `npm test` in `backend/`.
 
 ---
 
@@ -237,15 +199,14 @@ npm run dev             # Starts on localhost:3000
 - Check `https://draft-api.ahsdesigns.com/health` — should return `{"status":"ok"}`
 
 **"Email not found"** on login
-- Check the Users tab in your Google Sheet — the email must match exactly (case-insensitive)
-- Make sure the sheet is shared with the service account email
+- Add the user in the Super Admin panel (Group Users tab) — the email must match (case-insensitive)
 
-**Backend fails to start with a Google Sheets error**
-- Verify `GOOGLE_SHEET_ID` in your `.env` is correct
-- Verify the JSON key file path in `GOOGLE_SERVICE_ACCOUNT_KEY_PATH` is correct
-- Make sure the sheet is shared with the service account (Editor access)
-- Make sure the Google Sheets API is enabled in your Google Cloud project
+**"SUPER_ADMIN_PIN is not configured on the server"**
+- Set `SUPER_ADMIN_PIN` in `backend/.env` and restart the backend
 
-**Picks not saving to the Google Sheet**
-- Check the backend terminal for errors
-- Verify the service account has **Editor** (not Viewer) access to the sheet
+**Backend fails to start with a database error**
+- Verify `DATABASE_URL` in your `.env` is the full Neon connection string (including `?sslmode=require`)
+- Check that the Neon project is active (free-tier projects suspend when idle but wake automatically — the first connection can take a few seconds)
+
+**Users see "No draft is set up yet"**
+- Open the Super Admin panel and click **Make Current** on the draft you want to run

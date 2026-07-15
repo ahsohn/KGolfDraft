@@ -8,6 +8,8 @@ import { getTheme, applyThemeAttr } from "@/lib/themes";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
+  const [pin, setPin] = useState("");
+  const [pinRequired, setPinRequired] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [themeKey, setThemeKey] = useState<string>("golf");
@@ -47,10 +49,15 @@ export default function LoginPage() {
 
     socket.emit(
       "login",
-      { email: email.trim(), token: existingToken },
+      {
+        email: email.trim(),
+        pin: pinRequired ? pin.trim() : undefined,
+        token: existingToken,
+      },
       (res: {
         success: boolean;
         error?: string;
+        requiresPin?: boolean;
         token?: string;
         user?: { name: string };
       }) => {
@@ -60,6 +67,10 @@ export default function LoginPage() {
             localStorage.setItem("kgolfdraft_token", res.token);
           }
           router.push("/draft");
+        } else if (res.requiresPin) {
+          setPinRequired(true);
+          setError(res.error || "");
+          socket.disconnect();
         } else {
           setError(res.error || "Login failed");
           socket.disconnect();
@@ -94,10 +105,37 @@ export default function LoginPage() {
             type="email"
             required
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setPinRequired(false);
+              setPin("");
+            }}
             placeholder="you@example.com"
             className="w-full px-4 py-3 rounded-lg bg-theme-950 border border-theme-700 text-white placeholder-theme-600 focus:outline-none focus:ring-2 focus:ring-theme-500 focus:border-transparent"
           />
+
+          {pinRequired && (
+            <div className="mt-4">
+              <label
+                htmlFor="pin"
+                className="block text-sm font-medium text-theme-200 mb-2"
+              >
+                Super-Admin PIN
+              </label>
+              <input
+                id="pin"
+                type="password"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                required
+                autoFocus
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
+                placeholder="Enter your PIN"
+                className="w-full px-4 py-3 rounded-lg bg-theme-950 border border-theme-700 text-white placeholder-theme-600 focus:outline-none focus:ring-2 focus:ring-theme-500 focus:border-transparent"
+              />
+            </div>
+          )}
 
           {error && (
             <p className="mt-3 text-red-400 text-sm">{error}</p>
@@ -108,7 +146,11 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full mt-6 py-3 px-4 rounded-lg bg-theme-600 hover:bg-theme-500 disabled:bg-theme-800 disabled:cursor-not-allowed text-white font-semibold transition-colors"
           >
-            {loading ? "Connecting..." : "Join Draft"}
+            {loading
+              ? "Connecting..."
+              : pinRequired
+              ? "Verify PIN"
+              : "Join Draft"}
           </button>
         </form>
       </div>

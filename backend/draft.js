@@ -1,11 +1,11 @@
-const sheets = require("./sheets");
+const db = require("./db");
 
 const AUTO_DRAFT_DELAY_MS = 2000;
 
-const DRAFT_THEME =
-  process.env.DRAFT_THEME === "worldcup" ? "worldcup" : "golf";
-
-let state = {
+const emptyState = () => ({
+  draftId: null,
+  draftName: null,
+  theme: "golf",
   status: "waiting", // waiting | active | complete
   currentRound: 0,
   currentPickInRound: 0,
@@ -18,29 +18,33 @@ let state = {
   picks: [],
   teams: {},
   autoDraft: {},
-  onlineUsers: new Set(),
-};
+});
+
+let state = emptyState();
+
+// Online users are connection-level, not draft-level — survives draft switches
+const onlineUsers = new Set();
 
 let autoDraftTimer = null;
 let onPickCallback = null;
 
 function getState() {
   return {
+    draftId: state.draftId,
+    draftName: state.draftName,
+    theme: state.theme,
     status: state.status,
     currentRound: state.currentRound,
     currentPickInRound: state.currentPickInRound,
     totalRounds: state.totalRounds,
     draftFormat: state.draftFormat,
-    theme: DRAFT_THEME,
     overallPick: state.overallPick,
     users: state.users,
     availablePlayers: state.availablePlayers,
     picks: state.picks,
     teams: state.teams,
-    autoDraft: Object.fromEntries(
-      Object.entries(state.autoDraft)
-    ),
-    onlineUsers: Array.from(state.onlineUsers),
+    autoDraft: Object.fromEntries(Object.entries(state.autoDraft)),
+    onlineUsers: Array.from(onlineUsers),
     currentPicker: getCurrentPicker(),
   };
 }
@@ -82,52 +86,104 @@ function getPickOrderForRound(round) {
   return sorted;
 }
 
-async function initialize() {
-  const [players, users, existingPicks] = await Promise.all([
-    sheets.getPlayers(),
-    sheets.getUsers(),
-    sheets.getExistingPicks(),
+// Walk the rounds to convert a pick count into (round, pickInRound)
+function computePositionFromPicks(pickCount) {
+  let remaining = pickCount;
+  let round = 1;
+  while (round <= state.totalRounds) {
+    const roundLength = getPickOrderForRound(round).length;
+    if (remaining < roundLength) break;
+    remaining -= roundLength;
+    round++;
+  }
+  return { round, pickInRound: remaining };
+}
+
+// Load the current draft (players, participants, picks) from the database.
+// Called at startup and whenever the super-admin changes the current draft
+// or edits its players/participants.
+async function loadCurrentDraft() {
+  clearAutoDraftTimer();
+
+  // Preserve auto-draft flags when the same draft is reloaded mid-session
+  // (e.g. the super-admin renames a user during an active draft)
+  const prevDraftId = state.draftId;
+  const prevAutoDraft = state.autoDraft;
+
+  const draft = await db.getCurrentDraft();
+  if (!draft) {
+    state = emptyState();
+    console.log("No current draft set");
+    return;
+  }
+
+  const [players, users, picks] = await Promise.all([
+    db.getDraftPlayers(draft.id),
+    db.getDraftParticipants(draft.id),
+    db.getPicks(draft.id),
   ]);
 
+  state = emptyState();
+  state.draftId = draft.id;
+  state.draftName = draft.name;
+  state.theme = draft.theme;
+  state.status = draft.status;
+  state.totalRounds = draft.totalRounds;
+  state.draftFormat = draft.draftFormat;
   state.players = players.sort((a, b) => a.rank - b.rank);
   state.users = users.sort((a, b) => a.draftOrder - b.draftOrder);
   state.availablePlayers = [...state.players];
-  state.picks = [];
-  state.teams = {};
-  state.autoDraft = {};
 
   for (const user of state.users) {
     state.teams[user.email] = [];
-    state.autoDraft[user.email] = false;
+    state.autoDraft[user.email] =
+      prevDraftId === draft.id ? !!prevAutoDraft[user.email] : false;
   }
 
-  // Restore any existing picks from the sheet
-  if (existingPicks.length > 0) {
-    for (const pick of existingPicks) {
-      state.picks.push(pick);
-      state.availablePlayers = state.availablePlayers.filter(
-        (p) => p.name !== pick.golferName
-      );
-      if (state.teams[pick.userEmail]) {
-        const player = state.players.find((p) => p.name === pick.golferName);
-        if (player) {
-          state.teams[pick.userEmail].push(player);
-        }
+  for (const pick of picks) {
+    state.picks.push(pick);
+    state.availablePlayers = state.availablePlayers.filter(
+      (p) => p.name !== pick.golferName
+    );
+    if (state.teams[pick.userEmail]) {
+      const player = state.players.find((p) => p.name === pick.golferName);
+      if (player) {
+        state.teams[pick.userEmail].push(player);
       }
     }
   }
 
+  state.overallPick = state.picks.length;
+  if (state.status === "active") {
+    const pos = computePositionFromPicks(state.picks.length);
+    state.currentRound = pos.round;
+    state.currentPickInRound = pos.pickInRound;
+    if (state.currentRound > state.totalRounds) {
+      state.status = "complete";
+      db.updateDraftStatus(state.draftId, "complete").catch((err) =>
+        console.error("Error updating draft status:", err.message)
+      );
+    }
+  }
+
   console.log(
-    `Initialized: ${state.players.length} players, ${state.users.length} users, ${existingPicks.length} existing picks`
+    `Loaded draft "${draft.name}" (#${draft.id}): ${state.players.length} players, ${state.users.length} participants, ${picks.length} picks, status=${state.status}`
   );
+
+  // If we reloaded mid-draft and the on-clock user has auto-draft on, re-arm it
+  scheduleAutoDraftIfNeeded();
 }
 
 function setOnPickCallback(cb) {
   onPickCallback = cb;
 }
 
-function startDraft(totalRounds, draftFormat) {
+async function startDraft(totalRounds, draftFormat) {
+  if (!state.draftId) return { error: "No draft is set up yet" };
   if (state.status === "active") return { error: "Draft already in progress" };
+  if (state.status === "complete") return { error: "Draft is already complete" };
+  if (state.users.length === 0) return { error: "No participants assigned" };
+  if (state.players.length === 0) return { error: "No players loaded" };
 
   state.draftFormat =
     draftFormat === "thirdRoundReversal" ? "thirdRoundReversal" : "snake";
@@ -137,31 +193,22 @@ function startDraft(totalRounds, draftFormat) {
       ? THIRD_ROUND_REVERSAL_ORDER.length
       : totalRounds || 10;
 
-  if (state.picks.length > 0) {
-    // Resume from existing picks — rounds can have different lengths
-    state.overallPick = state.picks.length;
-    let remaining = state.overallPick;
-    let round = 1;
-    while (round <= state.totalRounds) {
-      const roundLength = getPickOrderForRound(round).length;
-      if (remaining < roundLength) break;
-      remaining -= roundLength;
-      round++;
-    }
-    state.currentRound = round;
-    state.currentPickInRound = remaining;
-  } else {
-    state.currentRound = 1;
-    state.currentPickInRound = 0;
-    state.overallPick = 0;
-  }
+  const pos = computePositionFromPicks(state.picks.length);
+  state.overallPick = state.picks.length;
+  state.currentRound = pos.round;
+  state.currentPickInRound = pos.pickInRound;
 
   if (state.currentRound > state.totalRounds) {
     state.status = "complete";
-    return { error: "All rounds already completed in sheet" };
+    return { error: "All rounds already completed" };
   }
 
   state.status = "active";
+  db.updateDraftStatus(state.draftId, "active", {
+    totalRounds: state.totalRounds,
+    draftFormat: state.draftFormat,
+  }).catch((err) => console.error("Error updating draft status:", err.message));
+
   console.log(
     `Draft started: ${state.totalRounds} rounds, ${state.users.length} users, resuming at pick ${state.overallPick + 1}`
   );
@@ -208,9 +255,9 @@ function makePick(userEmail, golferName, isAdminOverride = false) {
   state.picks.push(pick);
   state.teams[currentPicker.email].push(player);
 
-  // Write to Google Sheet (fire and forget, log errors)
-  sheets.writePick(pick).catch((err) => {
-    console.error("Error writing pick to sheet:", err.message);
+  // Persist to Postgres (fire and forget, log errors)
+  db.insertPick(state.draftId, pick).catch((err) => {
+    console.error("Error writing pick to database:", err.message);
   });
 
   // Advance to next pick
@@ -221,6 +268,9 @@ function makePick(userEmail, golferName, isAdminOverride = false) {
 
     if (state.currentRound > state.totalRounds) {
       state.status = "complete";
+      db.updateDraftStatus(state.draftId, "complete").catch((err) =>
+        console.error("Error updating draft status:", err.message)
+      );
       console.log("Draft complete!");
       return { success: true, pick, complete: true };
     }
@@ -230,6 +280,59 @@ function makePick(userEmail, golferName, isAdminOverride = false) {
   scheduleAutoDraftIfNeeded();
 
   return { success: true, pick };
+}
+
+// Super-admin: undo the most recent pick. Returns the undone pick and, if
+// auto-draft had to be switched off to prevent an instant re-pick, the email
+// of the user it was disabled for.
+async function undoLastPick() {
+  if (!state.draftId) return { error: "No draft is set up" };
+  if (state.picks.length === 0) return { error: "There are no picks to undo" };
+
+  clearAutoDraftTimer();
+
+  const undone = state.picks.pop();
+  state.overallPick = state.picks.length;
+
+  // Restore the player to the available pool, keeping rank order
+  const player = state.players.find((p) => p.name === undone.golferName);
+  if (player) {
+    state.availablePlayers.push(player);
+    state.availablePlayers.sort((a, b) => a.rank - b.rank);
+  }
+  if (state.teams[undone.userEmail]) {
+    state.teams[undone.userEmail] = state.teams[undone.userEmail].filter(
+      (p) => p.name !== undone.golferName
+    );
+  }
+
+  // A completed draft re-opens when a pick is undone
+  if (state.status === "complete") {
+    state.status = "active";
+    db.updateDraftStatus(state.draftId, "active").catch((err) =>
+      console.error("Error updating draft status:", err.message)
+    );
+  }
+
+  const pos = computePositionFromPicks(state.picks.length);
+  state.currentRound = pos.round;
+  state.currentPickInRound = pos.pickInRound;
+
+  try {
+    await db.deleteLastPick(state.draftId);
+  } catch (err) {
+    console.error("Error deleting pick from database:", err.message);
+  }
+
+  // Don't let auto-draft instantly re-make the pick that was just undone
+  let autoDraftDisabledFor = null;
+  const picker = getCurrentPicker();
+  if (picker && state.autoDraft[picker.email]) {
+    state.autoDraft[picker.email] = false;
+    autoDraftDisabledFor = picker.email;
+  }
+
+  return { success: true, pick: undone, autoDraftDisabledFor };
 }
 
 function scheduleAutoDraftIfNeeded() {
@@ -245,9 +348,7 @@ function scheduleAutoDraftIfNeeded() {
       const topPlayer = state.availablePlayers[0];
       if (!topPlayer) return;
 
-      console.log(
-        `Auto-drafting ${topPlayer.name} for ${picker.name}`
-      );
+      console.log(`Auto-drafting ${topPlayer.name} for ${picker.name}`);
       const result = makePick(picker.email, topPlayer.name);
       if (result.success && onPickCallback) {
         onPickCallback(result.pick, true);
@@ -279,18 +380,19 @@ function setAutoDraft(email, enabled) {
 }
 
 function setUserOnline(email) {
-  state.onlineUsers.add(email);
+  onlineUsers.add(email);
 }
 
 function setUserOffline(email) {
-  state.onlineUsers.delete(email);
+  onlineUsers.delete(email);
 }
 
 module.exports = {
-  initialize,
+  loadCurrentDraft,
   getState,
   startDraft,
   makePick,
+  undoLastPick,
   setAutoDraft,
   setUserOnline,
   setUserOffline,

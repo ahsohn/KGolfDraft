@@ -2,6 +2,7 @@ export interface User {
   email: string;
   name: string;
   isAdmin: boolean;
+  isSuperAdmin?: boolean;
   draftOrder: number;
 }
 
@@ -19,6 +20,8 @@ export interface Pick {
 }
 
 export interface DraftState {
+  draftId: number | null;
+  draftName: string | null;
   status: "waiting" | "active" | "complete";
   currentRound: number;
   currentPickInRound: number;
@@ -41,4 +44,43 @@ export interface ChatMessage {
   text: string;
   isSystem: boolean;
   timestamp: number;
+}
+
+// --- Super-admin types ---
+
+export interface GroupUser {
+  id: number;
+  email: string;
+  name: string;
+  isAdmin: boolean;
+  isSuperAdmin: boolean;
+}
+
+export interface DraftSummary {
+  id: number;
+  name: string;
+  theme: "golf" | "worldcup";
+  draftFormat: "snake" | "thirdRoundReversal";
+  totalRounds: number;
+  status: "waiting" | "active" | "complete";
+  isCurrent: boolean;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  pickCount: number;
+  participantCount: number;
+}
+
+export interface Participant {
+  email: string;
+  name: string;
+  isAdmin: boolean;
+  draftOrder: number;
+}
+
+export interface DraftDetail {
+  draft: DraftSummary;
+  players: Player[];
+  participants: Participant[];
+  picks: Pick[];
 }
