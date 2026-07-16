@@ -2,58 +2,48 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Theme palettes — golf (green, default) and worldcup (blue/navy).
-   Values are R G B triplets so Tailwind alpha modifiers keep working. */
-:root {
-  --theme-200: 187 247 208;
-  --theme-300: 134 239 172;
-  --theme-400: 74 222 128;
-  --theme-500: 34 197 94;
-  --theme-600: 22 163 74;
-  --theme-700: 21 128 61;
-  --theme-800: 22 101 52;
-  --theme-900: 20 83 45;
-  --theme-950: 5 46 22;
-}
-
-[data-theme="worldcup"] {
-  --theme-200: 191 219 254;
-  --theme-300: 147 197 253;
-  --theme-400: 96 165 250;
-  --theme-500: 59 130 246;
-  --theme-600: 37 99 235;
-  --theme-700: 29 78 216;
-  --theme-800: 30 64 175;
-  --theme-900: 30 58 138;
-  --theme-950: 23 37 84;
-}
-
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
 }
 
-/* Scrollbar styling for chat and player lists */
+/* Thin gold scrollbars for chat, player lists, and the board */
 .scroll-thin::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 .scroll-thin::-webkit-scrollbar-track {
   background: transparent;
 }
 .scroll-thin::-webkit-scrollbar-thumb {
-  background: #4b5563;
+  background: rgba(201, 162, 39, 0.4);
   border-radius: 3px;
 }
 
-/* Slow pulsing background glow when it's the user's turn */
-@keyframes your-turn-pulse {
-  0%, 100% {
-    background-color: rgba(234, 179, 8, 0.05);
+/* Soft gold glow on the on-clock strip when it's YOUR turn */
+@keyframes clock-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(242, 209, 107, 0);
   }
   50% {
-    background-color: rgba(234, 179, 8, 0.15);
+    box-shadow: 0 0 32px 4px rgba(242, 209, 107, 0.35);
   }
 }
-.animate-your-turn {
-  animation: your-turn-pulse 3s ease-in-out infinite;
+.animate-clock-pulse {
+  animation: clock-pulse 2.4s ease-in-out infinite;
+}
+
+/* Gentle blink on your "your pick" board cell */
+@keyframes soft-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+.animate-soft-blink {
+  animation: soft-blink 2.4s ease-in-out infinite;
 }

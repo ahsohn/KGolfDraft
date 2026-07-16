@@ -45,7 +45,7 @@ export default function ConfirmAction({
   }
 
   return (
-    <span className="inline-flex items-center gap-1">
+    <span className="inline-flex items-center gap-1.5">
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -61,7 +61,7 @@ export default function ConfirmAction({
           e.stopPropagation();
           setArming(false);
         }}
-        className="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs"
+        className="px-2.5 py-1 border border-cream/30 text-cream/70 text-[10px] tracking-[2px] uppercase hover:text-cream hover:border-cream/60"
       >
         Cancel
       </button>

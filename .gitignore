@@ -1,4 +1,5 @@
 node_modules/
+cdesign handoff/
 .env
 .env.local
 .next/

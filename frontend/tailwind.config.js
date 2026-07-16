@@ -4,20 +4,20 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        green: {
-          950: "#052e16",
+        // "Clubhouse" palette — Masters-scoreboard aesthetic
+        clubhouse: "#0a2b1d", // page background
+        sheet: "#10412c", // raised surfaces (mobile chat sheet, peek bar)
+        sheethead: "#0f3524", // sticky table headers
+        cream: "#f3edda", // primary text
+        gold: {
+          DEFAULT: "#c9a227", // accent
+          bright: "#dfb52e", // hover
         },
-        theme: {
-          200: "rgb(var(--theme-200) / <alpha-value>)",
-          300: "rgb(var(--theme-300) / <alpha-value>)",
-          400: "rgb(var(--theme-400) / <alpha-value>)",
-          500: "rgb(var(--theme-500) / <alpha-value>)",
-          600: "rgb(var(--theme-600) / <alpha-value>)",
-          700: "rgb(var(--theme-700) / <alpha-value>)",
-          800: "rgb(var(--theme-800) / <alpha-value>)",
-          900: "rgb(var(--theme-900) / <alpha-value>)",
-          950: "rgb(var(--theme-950) / <alpha-value>)",
-        },
+        clock: "#f2d16b", // on-the-clock yellow
+        rosewood: "#d98b7c", // destructive
+      },
+      fontFamily: {
+        serif: ["var(--font-playfair)", "Georgia", "serif"],
       },
     },
   },

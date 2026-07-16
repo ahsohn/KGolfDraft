@@ -6,6 +6,9 @@ import { getSocket } from "@/lib/socket";
 import { APP_VERSION } from "@/lib/version";
 import { getTheme, applyThemeAttr } from "@/lib/themes";
 
+const inputCls =
+  "w-full px-3.5 py-[13px] bg-[rgba(10,43,29,0.6)] border border-gold/30 text-cream placeholder-cream/35 text-base focus:outline-none focus:border-gold";
+
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [pin, setPin] = useState("");
@@ -80,23 +83,31 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">
+    <div className="min-h-screen flex items-center justify-center p-6 border-t-[3px] border-gold">
+      <div className="w-full max-w-[420px]">
+        <div className="text-center mb-9">
+          <div className="flex items-center justify-center gap-3.5 mb-2.5">
+            <span className="w-12 h-px bg-gold" />
+            <span className="text-[11px] tracking-[3px] uppercase text-gold">
+              {theme.subtitle}
+            </span>
+            <span className="w-12 h-px bg-gold" />
+          </div>
+          <h1 className="font-serif text-[44px] font-semibold text-cream leading-tight">
             {theme.appTitle}
           </h1>
-          <p className="text-theme-300 text-lg">{theme.subtitle}</p>
-          <p className="text-theme-600 text-xs mt-1">v{APP_VERSION}</p>
+          <p className="font-serif italic text-base text-cream/60 mt-2">
+            {theme.tagline}
+          </p>
         </div>
 
         <form
           onSubmit={handleLogin}
-          className="bg-theme-900/50 backdrop-blur rounded-xl p-8 shadow-2xl border border-theme-800"
+          className="border border-gold/50 bg-cream/[0.04] p-8"
         >
           <label
             htmlFor="email"
-            className="block text-sm font-medium text-theme-200 mb-2"
+            className="block text-[11px] tracking-[2.5px] uppercase text-gold mb-2.5"
           >
             Email Address
           </label>
@@ -111,14 +122,14 @@ export default function LoginPage() {
               setPin("");
             }}
             placeholder="you@example.com"
-            className="w-full px-4 py-3 rounded-lg bg-theme-950 border border-theme-700 text-white placeholder-theme-600 focus:outline-none focus:ring-2 focus:ring-theme-500 focus:border-transparent"
+            className={inputCls}
           />
 
           {pinRequired && (
-            <div className="mt-4">
+            <div className="mt-5">
               <label
                 htmlFor="pin"
-                className="block text-sm font-medium text-theme-200 mb-2"
+                className="block text-[11px] tracking-[2.5px] uppercase text-gold mb-2.5"
               >
                 Super-Admin PIN
               </label>
@@ -132,27 +143,29 @@ export default function LoginPage() {
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
                 placeholder="Enter your PIN"
-                className="w-full px-4 py-3 rounded-lg bg-theme-950 border border-theme-700 text-white placeholder-theme-600 focus:outline-none focus:ring-2 focus:ring-theme-500 focus:border-transparent"
+                className={inputCls}
               />
             </div>
           )}
 
-          {error && (
-            <p className="mt-3 text-red-400 text-sm">{error}</p>
-          )}
+          {error && <p className="mt-3 text-rosewood text-sm">{error}</p>}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-6 py-3 px-4 rounded-lg bg-theme-600 hover:bg-theme-500 disabled:bg-theme-800 disabled:cursor-not-allowed text-white font-semibold transition-colors"
+            className="w-full mt-6 px-4 py-3.5 bg-gold hover:bg-gold-bright disabled:opacity-60 disabled:cursor-not-allowed text-clubhouse font-semibold text-[13px] tracking-[2.5px] uppercase transition-colors"
           >
             {loading
-              ? "Connecting..."
+              ? "Connecting…"
               : pinRequired
               ? "Verify PIN"
-              : "Join Draft"}
+              : "Join the Draft"}
           </button>
         </form>
+
+        <p className="text-center text-[11px] text-cream/35 mt-5">
+          v{APP_VERSION}
+        </p>
       </div>
     </div>
   );
